@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import PanelBarChart from './panel-bar-chart.vue';
 import { useFieldsStore } from '@/stores/fields';
 import PreviewSVG from './preview.svg?raw';
+import { getDisplayTemplateRelatedData } from '@/utils/get-field-display-template-fields';
 
 export default definePanel({
 	id: 'bar-chart',
@@ -16,6 +17,20 @@ export default definePanel({
 		if (requiredFields.some((field) => !(field in options))) return;
 
 		options['function'] = options['function'] ?? 'max';
+		let displayDataQuery = null;
+		const displayTemplateRelatedData = getDisplayTemplateRelatedData(options['collection'], options['xAxis']);
+
+		if (displayTemplateRelatedData) {
+			displayDataQuery = {
+				collection: displayTemplateRelatedData.collection,
+				mathchField: options['xAxis'],
+				primaryKey: displayTemplateRelatedData.primaryKey,
+				query: {
+					fields: displayTemplateRelatedData.fields,
+					filters: {}
+				},
+			}
+		}
 
 		return {
 			collection: options['collection'],
@@ -25,6 +40,7 @@ export default definePanel({
 				filter: options['filter'] ?? {},
 				limit: -1,
 			},
+			displayDataQuery,
 		};
 	},
 	options: ({ options }) => {

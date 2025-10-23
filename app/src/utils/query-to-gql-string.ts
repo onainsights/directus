@@ -99,3 +99,25 @@ function replaceFuncs(filter?: Filter | null): null | undefined | Filter {
 		});
 	}
 }
+
+/**
+ * Get GraphQL strings for the given queries
+ */
+export function getGqlStrings(queriesList: any[]) {
+	const passedQuery = queriesList
+		.filter(({ collection }) => isSystemCollection(collection) === false)
+		.map(({ key, ...rest }) => ({ key: `query_${key}`, ...rest }));
+
+	const gqlString = queryToGqlString(passedQuery);
+
+	const systemGqlString = queryToGqlString(
+		queriesList
+			.filter(({ collection }) => isSystemCollection(collection))
+			.map(({ key, ...rest }) => ({
+				key: `query_${key}`,
+				...rest,
+			})),
+	);
+
+	return { gqlString, systemGqlString };
+}

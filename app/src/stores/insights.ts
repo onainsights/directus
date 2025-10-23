@@ -3,10 +3,9 @@ import { useExtensions } from '@/extensions';
 import { usePermissionsStore } from '@/stores/permissions';
 import { Dashboard } from '@/types/insights';
 import { fetchAll } from '@/utils/fetch-all';
-import { queryToGqlString } from '@/utils/query-to-gql-string';
+import { getGqlStrings } from '@/utils/query-to-gql-string';
 import { unexpectedError } from '@/utils/unexpected-error';
 import type { Panel } from '@directus/extensions';
-import { isSystemCollection } from '@directus/system-data';
 import type { Item } from '@directus/types';
 import { applyOptionsData, getSimpleHash, toArray } from '@directus/utils';
 import { AxiosResponse } from 'axios';
@@ -219,51 +218,86 @@ export const useInsightsStore = defineStore('insightsStore', () => {
 				continue;
 			}
 
-			toArray(req).forEach(({ collection, query }, index) => {
+			toArray(req).forEach(({ collection, query, displayDataQuery }, index) => {
 				const key = getSimpleHash(panel.id + collection + JSON.stringify(query));
-				queries.set(key, { panel: panel.id, collection, query, key, index, length: toArray(req).length });
+				queries.set(key, { panel: panel.id, collection, query, key, index, length: toArray(req).length, displayDataQuery });
 			});
 		}
 
 		loading.value = uniq([...loading.value, ...Array.from(queries.values()).map(({ panel }) => panel)]);
 
-		const gqlString = queryToGqlString(
-			Array.from(queries.values())
-				.filter(({ collection }) => isSystemCollection(collection) === false)
-				.map(({ key, ...rest }) => ({ key: `query_${key}`, ...rest })),
-		);
-
-		const systemGqlString = queryToGqlString(
-			Array.from(queries.values())
-				.filter(({ collection }) => isSystemCollection(collection))
-				.map(({ key, ...rest }) => ({
-					key: `query_${key}`,
-					...rest,
-				})),
-		);
+		const { gqlString, systemGqlString } = getGqlStrings(Array.from(queries.values()));
 
 		try {
-			const requests: Promise<AxiosResponse<any, any>>[] = [];
-
-			if (gqlString) requests.push(api.post(`/graphql`, { query: gqlString }));
-			if (systemGqlString) requests.push(api.post(`/graphql/system`, { query: systemGqlString }));
+			const requests = buildApiRequests(gqlString, systemGqlString);
 
 			const responses = await Promise.all(requests);
 
 			const results: { [panel: string]: Item | Item[] } = {};
+			const displayQueries = []
 
 			for (const { data } of responses) {
 				const result = mapKeys(data.data, (_, key) => key.substring('query_'.length));
 
 				for (const [key, data] of Object.entries(result)) {
-					const { panel, length } = queries.get(key);
-					if (length === 1) results[panel] = data;
-					else if (!results[panel]) results[panel] = [data];
-					else results[panel]?.push(data);
+					let processedData = data
+					const { panel, length, displayDataQuery } = queries.get(key);
+					let filterValues = [];
+
+					if (displayDataQuery && Object.keys(data[0].group).length > 0) {
+						const { mathchField } = displayDataQuery;
+
+						filterValues = data.map(
+							(item: { group: Record<string, string> }) => item.group[mathchField]
+						);
+					}
+
+					if(filterValues.length > 0) {
+						const { primaryKey } = displayDataQuery;
+						const filter = { [primaryKey]: { _in: [...new Set(filterValues)] } }
+
+						displayQueries.push({
+							panel, key,
+							collection: displayDataQuery.collection,
+							query: { filter, fields: displayDataQuery.query.fields }
+						});
+
+						processedData = data.map((item: Record<string, any>) => ({ ...item, [key]: key }));
+					}
+
+					if (length === 1) results[panel] = processedData;
+					else if (!results[panel]) results[panel] = [processedData];
+					else results[panel]?.push(processedData);
 				}
 
 				if (Array.isArray(data.errors)) {
 					setErrorsFromResponseData(data.errors);
+				}
+			}
+
+
+			if (displayQueries.length > 0) {
+				const { gqlString, systemGqlString } = getGqlStrings(displayQueries);
+				const displayRequests = buildApiRequests(gqlString, systemGqlString);
+				const displayResponses = await Promise.all(displayRequests);
+
+				for (const { data } of displayResponses) {
+					const displayResults = mapKeys(data.data, (_, key) => key.substring('query_'.length));
+
+					for (const [key, responseData] of Object.entries(displayResults)) {
+						const { panel, displayDataQuery } = queries.get(key);
+						const { mathchField, primaryKey } = displayDataQuery;
+
+						const responseDataMap = new Map();
+						responseData.forEach((d: Record<string, any>) => {responseDataMap.set(d[primaryKey], d);});
+
+						results[panel] = results[panel]?.map((item: Record<string, any>) => {
+							const isMatch = item[key] == key && item?.group?.[mathchField] && responseDataMap.has(item['group'][mathchField])
+							const displayData = isMatch ? responseDataMap.get(item['group'][mathchField]) : null;
+							return { ...item, displayData }
+						})
+					}
+
 				}
 			}
 
@@ -294,6 +328,14 @@ export const useInsightsStore = defineStore('insightsStore', () => {
 			}
 		} finally {
 			loading.value = pull(unref(loading), ...Array.from(queries.values()).map(({ panel }) => panel));
+		}
+
+		/** Build the axios requests from gql strings */
+		function buildApiRequests(gqlString: string | null, systemGqlString: string | null) {
+			const requests: Promise<AxiosResponse<any, any>>[] = [];
+			if (gqlString) requests.push(api.post(`/graphql`, { query: gqlString }));
+			if (systemGqlString) requests.push(api.post(`/graphql/system`, { query: systemGqlString }));
+			return requests;
 		}
 
 		/**

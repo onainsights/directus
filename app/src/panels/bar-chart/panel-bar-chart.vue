@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { useFieldsStore } from '@/stores/fields';
 import { PanelFunction, StringConditionalFillOperators } from '@/types/panels';
+import { getFieldDisplayTemplate } from '@/utils/get-field-display-template-fields';
+import { getRelatedCollection } from '@/utils/get-related-collection';
+import { renderDisplayStringTemplate } from '@/utils/render-string-template';
 import type { Filter } from '@directus/types';
 import ApexCharts from 'apexcharts';
 import { isNil, snakeCase } from 'lodash';
@@ -88,6 +91,9 @@ const formatNumericValue = (val: any) => {
 	return val;
 };
 
+const template = getFieldDisplayTemplate(props.collection, props.xAxis);
+const { relatedCollection } = getRelatedCollection(props.collection, props.xAxis) || {};
+
 function setUpChart() {
 	const metrics = props.data
 		.map((metric) => {
@@ -98,9 +104,15 @@ function setUpChart() {
 			const y = props.decimals >= 0 ? yValue.toFixed(props.decimals) : yValue;
 			if (isNaN(yValue)) return null;
 
+			let xValue = formatNumericValue(x)
+
+			if(metric['displayData'] && template) {
+				xValue = renderDisplayStringTemplate(relatedCollection ?? props.collection, template, metric['displayData']) || xValue;
+			}
+
 			return {
 				fillColor: getFillColor(x, y),
-				x: formatNumericValue(x),
+				x: xValue,
 				y,
 			};
 		})
