@@ -4,6 +4,7 @@ import { definePanel, type PanelQuery } from '@directus/extensions';
 import { computed } from 'vue';
 import PanelMetricList from './panel-metric-list.vue';
 import PreviewSVG from './preview.svg?raw';
+import { getDisplayTemplateRelatedData } from '@/utils/get-field-display-template-fields';
 
 export default definePanel({
 	id: 'metric-list',
@@ -33,6 +34,21 @@ export default definePanel({
 
 		const group = [options.groupByField];
 
+		let displayDataQuery = null;
+		const displayTemplateRelatedData = getDisplayTemplateRelatedData(options.collection, options.groupByField);
+
+		if (displayTemplateRelatedData && options.groupByField) {
+			displayDataQuery = {
+				collection: displayTemplateRelatedData.collection,
+				mathchField: options.groupByField,
+				primaryKey: displayTemplateRelatedData.primaryKey,
+				query: {
+					fields: displayTemplateRelatedData.fields,
+					filters: {}
+				},
+			}
+		}
+
 		const panelQuery: PanelQuery = {
 			collection: options.collection,
 			query: {
@@ -47,7 +63,7 @@ export default definePanel({
 			panelQuery.query.filter = options.filter;
 		}
 
-		return panelQuery;
+		return {...panelQuery, displayDataQuery };
 	},
 	options: ({ options }) => {
 		const fieldsStore = useFieldsStore();

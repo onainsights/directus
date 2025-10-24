@@ -7,6 +7,8 @@ import { isNil } from 'lodash';
 import { formatNumber } from '@/utils/format-number';
 import { computed, unref } from 'vue';
 import type { Style, Notation, Unit } from '@/utils/format-number';
+import { getFieldDisplayTemplate } from '@/utils/get-field-display-template-fields';
+import { getRelatedCollection } from '@/utils/get-related-collection';
 
 export interface Group {
 	[groupByField: string]: string;
@@ -148,6 +150,10 @@ function getColor(input?: number) {
 		return false;
 	}
 }
+
+const displayTemplate = getFieldDisplayTemplate(props.collection, props.groupByField);
+const { relatedCollection } = getRelatedCollection(props.collection, props.groupByField) || {};
+
 </script>
 
 <template>
@@ -165,6 +171,13 @@ function getColor(input?: number) {
 					>
 						<div class="metric-bar-text">
 							<render-template
+								v-if="row['displayData'] && displayTemplate"
+								:item="row['displayData']"
+								:collection="relatedCollection ?? collection"
+								:template="displayTemplate"
+							/>
+							<render-template
+								v-else
 								:item="{ [groupByField]: row['group'][groupByField] }"
 								:collection="collection"
 								:template="`{{${groupByField}}}`"
