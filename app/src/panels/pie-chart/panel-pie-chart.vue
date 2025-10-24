@@ -7,6 +7,9 @@ import { isNil } from 'lodash';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { monoThemeGenerator } from './color-generator';
+import { getFieldDisplayTemplate } from '@/utils/get-field-display-template-fields';
+import { getRelatedCollection } from '@/utils/get-related-collection';
+import { renderDisplayStringTemplate } from '@/utils/render-string-template';
 
 type ConditionalFillFormat = {
 	operator: StringConditionalFillOperators;
@@ -87,9 +90,16 @@ async function fetchData() {
 	setupChart();
 }
 
+const displayTemplate = getFieldDisplayTemplate(props.collection, props.column);
+const { relatedCollection } = getRelatedCollection(props.collection, props.column) || {};
+
 async function setupChart() {
 	const labels: (string | number)[] = props.data.map((item) => {
-		const label = item['group'][props.column];
+		let label = item['group'][props.column];
+
+		if(item['displayData'] && displayTemplate) {
+			label = renderDisplayStringTemplate(relatedCollection ?? props.collection, displayTemplate, item['displayData']) || label;
+		}
 
 		if (props.decimals === 0 || isNaN(Number(label))) {
 			return props.legend === 'right' ? String(label).substring(0, 8) : String(label);

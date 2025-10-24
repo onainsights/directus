@@ -4,6 +4,7 @@ import { cssVar } from '@directus/utils/browser';
 import { computed } from 'vue';
 import PanelPieChart from './panel-pie-chart.vue';
 import PreviewSVG from './preview.svg?raw';
+import { getDisplayTemplateRelatedData } from '@/utils/get-field-display-template-fields';
 
 export default definePanel({
 	id: 'pie-chart',
@@ -15,6 +16,21 @@ export default definePanel({
 	query(options) {
 		if (!options.column) return;
 
+		let displayDataQuery = null;
+		const displayTemplateRelatedData = getDisplayTemplateRelatedData(options.collection, options.column);
+
+		if (displayTemplateRelatedData && options.collection) {
+			displayDataQuery = {
+				collection: displayTemplateRelatedData.collection,
+				mathchField: options.column,
+				primaryKey: displayTemplateRelatedData.primaryKey,
+				query: {
+					fields: displayTemplateRelatedData.fields,
+					filters: {}
+				},
+			}
+		}
+
 		return {
 			collection: options.collection,
 			query: {
@@ -25,6 +41,7 @@ export default definePanel({
 				filter: options.filter ?? {},
 				limit: -1,
 			},
+			displayDataQuery,
 		};
 	},
 	options: ({ options }) => {
