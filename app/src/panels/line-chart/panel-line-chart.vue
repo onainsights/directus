@@ -9,6 +9,9 @@ import { isNil } from 'lodash';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { monoThemeGenerator } from '../pie-chart/color-generator';
+import { getFieldDisplayTemplate } from '@/utils/get-field-display-template-fields';
+import { getRelatedCollection } from '@/utils/get-related-collection';
+import { renderDisplayStringTemplate } from '@/utils/render-string-template';
 
 const props = withDefaults(
 	defineProps<{
@@ -99,10 +102,21 @@ const yAxisRange = computed(() => {
 	return { max, min };
 });
 
+const displayTemplate = getFieldDisplayTemplate(props.collection, props.xAxis!);
+const { relatedCollection } = getRelatedCollection(props.collection, props.xAxis!) || {};
+
 function setUpChart() {
 	if (props.aggregation && !props.xAxis) return;
 
-	const categories = [...new Set(props.data.map((d) => d['group'][props.xAxis!]))]; // get the unique categories
+	const categories = [...new Set(props.data.map((d) => {
+		let x = d['group']?.[props.xAxis!];
+
+		if (relatedCollection && displayTemplate) {
+			x = renderDisplayStringTemplate(relatedCollection ?? props.collection, displayTemplate, d['displayData']) || x;
+		}
+
+		return x;
+	}))]; // get the unique categories
 
 	let series: any = [];
 

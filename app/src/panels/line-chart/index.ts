@@ -4,6 +4,7 @@ import { computed } from 'vue';
 import { getGroups } from '@/utils/get-groups';
 import PanelLineChart from './panel-line-chart.vue';
 import PreviewSVG from './preview.svg?raw';
+import { getDisplayTemplateRelatedData } from '@/utils/get-field-display-template-fields';
 
 export default definePanel({
 	id: 'line-chart',
@@ -35,9 +36,25 @@ export default definePanel({
 			query['group'].push(options['grouping']);
 		}
 
+		let displayDataQuery = null;
+		const displayTemplateRelatedData = getDisplayTemplateRelatedData(options.collection, options['xAxis']);
+
+		if (displayTemplateRelatedData) {
+			displayDataQuery = {
+				collection: displayTemplateRelatedData.collection,
+				mathchField: options['xAxis'],
+				primaryKey: displayTemplateRelatedData.primaryKey,
+				query: {
+					fields: displayTemplateRelatedData.fields,
+					filters: {}
+				},
+			}
+		}
+
 		return {
 			collection: options['collection'],
 			query,
+			displayDataQuery,
 		};
 	},
 	options: ({ options }) => {

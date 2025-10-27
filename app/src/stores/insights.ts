@@ -292,8 +292,8 @@ export const useInsightsStore = defineStore('insightsStore', () => {
 						responseData.forEach((d: Record<string, any>) => {responseDataMap.set(d[primaryKey], d);});
 
 						results[panel] = results[panel]?.map((item: Record<string, any>) => {
-							const isMatch = item[key] == key && item?.group?.[mathchField] && responseDataMap.has(item['group'][mathchField])
-							const displayData = isMatch ? responseDataMap.get(item['group'][mathchField]) : null;
+							const isMatch = item[key] === key && item?.group?.[mathchField] && responseDataMap.has(String(item['group'][mathchField]))
+							const displayData = isMatch ? responseDataMap.get(String(item['group'][mathchField])) : null;
 							return { ...item, displayData }
 						})
 					}
