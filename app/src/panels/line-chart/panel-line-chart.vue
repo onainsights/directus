@@ -102,11 +102,10 @@ const yAxisRange = computed(() => {
 	return { max, min };
 });
 
-const displayTemplate = getFieldDisplayTemplate(props.collection, props.xAxis!);
-const { relatedCollection } = getRelatedCollection(props.collection, props.xAxis!) || {};
-
 function setUpChart() {
 	if (props.aggregation && !props.xAxis) return;
+	const displayTemplate = getFieldDisplayTemplate(props.collection, props.xAxis!);
+	const { relatedCollection } = getRelatedCollection(props.collection, props.xAxis!) || {};
 
 	const categories = [...new Set(props.data.map((d) => {
 		let x = d['group']?.[props.xAxis!];

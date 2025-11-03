@@ -91,10 +91,11 @@ const formatNumericValue = (val: any) => {
 	return val;
 };
 
-const template = getFieldDisplayTemplate(props.collection, props.xAxis);
-const { relatedCollection } = getRelatedCollection(props.collection, props.xAxis) || {};
 
 function setUpChart() {
+	const template = getFieldDisplayTemplate(props.collection, props.xAxis);
+	const { relatedCollection } = getRelatedCollection(props.collection, props.xAxis) || {};
+
 	const metrics = props.data
 		.map((metric) => {
 			const x = metric['group']?.[props.xAxis];

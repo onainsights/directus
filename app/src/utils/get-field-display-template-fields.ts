@@ -15,7 +15,7 @@ export function getFieldDisplayTemplate(collection: string, field: string) {
 export function getDisplayTemplateRelatedData(collection: string, field: string) {
     const localType = getLocalTypeForField(collection, field);
     if (localType !== 'm2o') return null;
-    
+
     const template = getFieldDisplayTemplate(collection, field);
     if (!template) return null;
 
@@ -23,7 +23,7 @@ export function getDisplayTemplateRelatedData(collection: string, field: string)
     if (!relatedCollection) return null;
 
     const fieldsStore = useFieldsStore();
-    const fields = adjustFieldsForDisplays(getFieldsFromTemplate(template), collection);
+    const fields = adjustFieldsForDisplays(getFieldsFromTemplate(template), relatedCollection);
     const primaryKeyField = fieldsStore.getPrimaryKeyFieldForCollection(relatedCollection);
     let primaryKeyFieldValue = null;
 
@@ -35,7 +35,5 @@ export function getDisplayTemplateRelatedData(collection: string, field: string)
         }
     }
 
-    const processedFields = adjustFieldsForDisplays(fields, relatedCollection);
-
-    return { fields: processedFields, primaryKey: primaryKeyFieldValue, collection: relatedCollection };
+    return { fields, primaryKey: primaryKeyFieldValue, collection: relatedCollection };
 }

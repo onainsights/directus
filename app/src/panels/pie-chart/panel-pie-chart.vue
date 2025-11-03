@@ -90,10 +90,10 @@ async function fetchData() {
 	setupChart();
 }
 
-const displayTemplate = getFieldDisplayTemplate(props.collection, props.column);
-const { relatedCollection } = getRelatedCollection(props.collection, props.column) || {};
-
 async function setupChart() {
+	const displayTemplate = getFieldDisplayTemplate(props.collection, props.column);
+	const { relatedCollection } = getRelatedCollection(props.collection, props.column) || {};
+
 	const labels: (string | number)[] = props.data.map((item) => {
 		let label = item['group'][props.column];
 
